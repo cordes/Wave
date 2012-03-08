@@ -18,17 +18,16 @@ double freqs[] = {
     739.989, 783.991, 830.609, 880.000, 932.328, 987.767
 };
 
-double getFreq(enum ton t, int oktave = 1) {
+double getFreq(enum ton t, int oktave = 1) { // WTF?!?!
 	return freqs[t * oktave];
 }
 
 void blend(DataChunk *chunk) {
     int numSamples = chunk->length / sizeof(short);
     int blendSamples = chunk->samplesPerSecond / 100;
-    double factor, t = 0;
-    double flankenzeit = 0.01;
-    double B = flankenzeit/2.3;
-    double delta_t = 1.0/ chunk->samplesPerSecond;
+    double factor, t = 0, flankenzeit = 0.01;
+    double B = flankenzeit / 2.3;
+    double delta_t = 1.0 / chunk->samplesPerSecond;
 
     for (int i = 0; i < blendSamples; i++) {
         factor = exp(-((t-flankenzeit)/B) * ((t-flankenzeit)/B));
@@ -45,9 +44,19 @@ DataChunk *create_note(int mSec, enum ton t, Wave *wave) {
     return tmpChunk;
 }
 
+void write_notes(Wave *wave, enum ton *toene, int *laengen, int num) {
+    DataChunk *chunk;
+	int offset = 0;
+	for (int i = 0; i < num; i++) {
+		chunk = create_note(laengen[i], toene[i], wave);
+		wave->dataChunk->add(chunk, offset);
+        free(chunk); // !!!!!!
+	    offset += laengen[i];
+	}
+}
+
 int main() {
 	Wave *wave = new Wave(0, 44100);
-	DataChunk *tmpChunk;
 	char *path = (char *) malloc(sizeof(char) * 16);
 	strncpy(path, "Test.wav", 16);
 
@@ -59,14 +68,8 @@ int main() {
         500, 750, 250, 500, 1000, 500, 1500, 1500,
         750, 250, 500, 1000, 500, 2000
     };
-	int max = sizeof(toene) / sizeof(int);
-	int punkt = 0;
-	for (int i = 0; i < max; i++) {
-		tmpChunk = create_note(laengen[i], toene[i], wave);
-		wave->dataChunk->add(tmpChunk, punkt);
-        free(tmpChunk); // !!!!!!
-	    punkt += laengen[i];
-	}
+	int num_notes = sizeof(toene) / sizeof(enum ton);
+    write_notes(wave, toene, laengen, num_notes);
 
     enum ton toene2[] = {
         B2, E2, E2, E2, E2,
@@ -76,14 +79,8 @@ int main() {
         500, 1500, 1500, 1500, 1500,
         1500, 1500, 1500, 1000
     };
-	max = sizeof(toene2) / sizeof(int);
-	punkt = 0;
-	for (int i = 0; i < max; i++) {
-		tmpChunk = create_note(laengen2[i], toene2[i], wave);
-		wave->dataChunk->add(tmpChunk, punkt);
-		free(tmpChunk); // !!!!!!
-	    punkt += laengen2[i];
-	}
+	num_notes = sizeof(toene2) / sizeof(enum ton);
+	write_notes(wave, toene2, laengen2, num_notes);
 
 	wave->write_wav(path);
 
